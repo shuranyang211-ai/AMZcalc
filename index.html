@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2563EB">
 <title>Amazon 产品利润核算工作台 V2.2</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230F1B2D'/%3E%3Cpath d='M9 17.5l4.2-5.2 3.1 3.4L21 9.5' stroke='%23FF9900' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='21' cy='9.5' r='1.8' fill='%23FF9900'/%3E%3Cpath d='M9 22.5h14' stroke='%23FF9900' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2032%2032%27%3E%0A%3Crect%20width%3D%2732%27%20height%3D%2732%27%20rx%3D%278%27%20fill%3D%27%232563EB%27%2F%3E%0A%3Cpath%20d%3D%27M8%2023h16%27%20stroke%3D%27%23BFDBFE%27%20stroke-width%3D%272.2%27%20stroke-linecap%3D%27round%27%20opacity%3D%27.8%27%2F%3E%0A%3Cpath%20d%3D%27M9%2019l4-5%204%203%206-8%27%20stroke%3D%27%23FFFFFF%27%20stroke-width%3D%273%27%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%0A%3Cpath%20d%3D%27M21%209h3v3%27%20stroke%3D%27%23FFFFFF%27%20stroke-width%3D%272.4%27%20fill%3D%27none%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%2F%3E%0A%3C%2Fsvg%3E">
 <style>
 
 :root{
@@ -193,6 +194,7 @@ details.param-block{border:1px solid var(--line);border-radius:12px;margin-top:1
         <div class="secondary-grid">
           <div class="mini-metric"><div class="mk">广告前贡献利润</div><div class="mv" id="op_baseprofit">—</div></div>
           <div class="mini-metric"><div class="mk">广告 CPA</div><div class="mv" id="op_cpa">—</div></div>
+          <div class="mini-metric"><div class="mk">点击多少次出 1 单</div><div class="mv" id="op_clicksperorder">—</div><div class="mini" style="margin-top:3px">1 ÷ 转化率</div></div>
           <div class="mini-metric"><div class="mk">保本 CPC</div><div class="mv" id="op_becpc">—</div></div>
           <div class="mini-metric"><div class="mk">广告 ACOS</div><div class="mv" id="op_acos">—</div></div>
           <div class="mini-metric"><div class="mk">TACOS</div><div class="mv" id="op_tacos">—</div></div>
@@ -291,6 +293,7 @@ function calcOperation(o){
   const denom=1-comm-rr;
   const discountedBe=denom>0?(landed+o.fba+o.otherCost)/denom:null;
   const minListPrice=discountedBe!==null&&1-disc>0?discountedBe/(1-disc):null;
+  const clicksPerOrder=conv>0?1/conv:null;
   const adClicks=o.cpc>0?o.adSpend/o.cpc:0, adOrders=adClicks*conv, natOrders=o.naturalTraffic*conv, totalOrders=adOrders+natOrders;
   const adRevenue=discounted*adOrders, totalRevenue=discounted*totalOrders;
   const acos=adRevenue>0?o.adSpend/adRevenue*100:null, tacos=totalRevenue>0?o.adSpend/totalRevenue*100:null, roas=o.adSpend>0?adRevenue/o.adSpend:null;
@@ -299,7 +302,7 @@ function calcOperation(o){
   let natBeOrders=null,natBeTraffic=null;
   if(baseProfit>0&&conv>0){ natBeOrders=Math.max(0,-adContribution/baseProfit); natBeTraffic=natBeOrders/conv; }
   const adShare=totalOrders>0?adOrders/totalOrders*100:null;
-  return {rate,discounted,landed,commission,returnCost,baseProfit,cpa,adOrderProfit,beCpc,beAcos,beRoas,minListPrice,adClicks,adOrders,natOrders,totalOrders,adRevenue,totalRevenue,acos,tacos,roas,dailyProfit,monthlyProfit,natBeOrders,natBeTraffic,adShare,denom};
+  return {rate,discounted,landed,commission,returnCost,baseProfit,cpa,clicksPerOrder,adOrderProfit,beCpc,beAcos,beRoas,minListPrice,adClicks,adOrders,natOrders,totalOrders,adRevenue,totalRevenue,acos,tacos,roas,dailyProfit,monthlyProfit,natBeOrders,natBeTraffic,adShare,denom};
 }
 function reverseTargets(o,r,targetProfit,targetMarginPct){
   const conv=decPct(o.convPct), disc=clamp(decPct(o.discountPct),0,.95), target=num(targetProfit), tm=decPct(targetMarginPct);
@@ -429,6 +432,7 @@ function renderOperationExplanation(o,r){
     <div class="formula-row"><div class="f-name">退货损耗</div><div class="f-desc"><code>$${fmt(r.discounted)} × ${fmt(o.returnRatePct,1)}% × ${fmt(rf,0)}%</code> = <b>$${fmt(r.returnCost)}</b>。</div></div>
     <div class="formula-row"><div class="f-name">广告前贡献利润</div><div class="f-desc"><code>折后价 − 佣金 − FBA − 采购头程 − 退货损耗 − 其他单件成本</code> = <b>$${fmt(r.baseProfit)}</b>。</div></div>
     <div class="formula-row"><div class="f-name">广告 CPA</div><div class="f-desc">${cpa}。</div></div>
+    <div class="formula-row"><div class="f-name">点击多少次出 1 单</div><div class="f-desc">${r.clicksPerOrder===null?'转化率为 0，无法计算。':`<code>1 ÷ ${fmt(o.convPct,2)}%</code> = <b>${fmt(r.clicksPerOrder,1)} 次</b>。也就是按当前转化率，平均约点击 ${fmt(r.clicksPerOrder,1)} 次才能产生 1 个订单。`}</div></div>
     <div class="formula-row"><div class="f-name">广告订单净利润</div><div class="f-desc"><code>广告前贡献利润 − CPA</code> = <b>${r.adOrderProfit===null?'—':'$'+fmt(r.adOrderProfit)}</b>。用于判断广告订单本身赚不赚钱。</div></div>
     <div class="formula-row"><div class="f-name">保本 CPC</div><div class="f-desc"><code>广告前贡献利润 × CVR</code> = <b>$${fmt(r.beCpc)}</b>。这是当前成本结构能承受的最高理论点击价。</div></div>
     <div class="formula-row"><div class="f-name">ACOS / TACOS</div><div class="f-desc">ACOS = 广告费 ÷ 广告销售额；TACOS = 广告费 ÷ 总销售额。前者看广告效率，后者看广告对整个销售盘子的依赖程度。</div></div>
@@ -437,7 +441,7 @@ function renderOperationExplanation(o,r){
 
 function renderOperation(){
   const o=readOp(),r=calcOperation(o);
-  setVal('op_minprice',r.minListPrice,'$'); setVal('op_discounted',r.discounted,'$'); setVal('op_baseprofit',r.baseProfit,'$',r.baseProfit>=0?'pos':'neg'); setVal('op_cpa',r.cpa,'$'); setVal('op_adorderprofit',r.adOrderProfit,'$',r.adOrderProfit===null?null:r.adOrderProfit>=0?'pos':'neg'); setVal('op_becpc',r.beCpc,'$'); setVal('op_breakeven',r.beAcos,'%'); setVal('op_beroas',r.beRoas,'×');
+  setVal('op_minprice',r.minListPrice,'$'); setVal('op_discounted',r.discounted,'$'); setVal('op_baseprofit',r.baseProfit,'$',r.baseProfit>=0?'pos':'neg'); setVal('op_cpa',r.cpa,'$'); setVal('op_clicksperorder',r.clicksPerOrder,'次'); setVal('op_adorderprofit',r.adOrderProfit,'$',r.adOrderProfit===null?null:r.adOrderProfit>=0?'pos':'neg'); setVal('op_becpc',r.beCpc,'$'); setVal('op_breakeven',r.beAcos,'%'); setVal('op_beroas',r.beRoas,'×');
   setVal('op_adclicks',r.adClicks,'次'); setVal('op_adorders',r.adOrders,'单'); setVal('op_natorders',r.natOrders,'单'); setVal('op_totalorders',r.totalOrders,'单'); setVal('op_acos',r.acos,'%'); setVal('op_tacos',r.tacos,'%'); setVal('op_roas',r.roas,'×'); setVal('op_adshare',r.adShare,'%'); setVal('op_dailyprofit',r.dailyProfit,'$',r.dailyProfit>=0?'pos':'neg'); setVal('op_monthlyprofit',r.monthlyProfit,'$',r.monthlyProfit>=0?'pos':'neg'); setVal('op_natbeorders',r.natBeOrders,'单'); setVal('op_natbetraffic',r.natBeTraffic,'次');
   renderHealth(o,r); renderOpDetail(o,r); renderOperationExplanation(o,r); renderSimulator();
   const note=$('op_note');
@@ -449,7 +453,7 @@ function renderOperation(){
 function setVal(id,v,unit='',cls=null){ const e=$(id); e.textContent=v===null||v===undefined||!isFinite(v)?'—':(unit==='$'?'$ ':'')+fmt(v,unit==='次'||unit==='单'?1:2)+(unit&&unit!=='$'?' '+unit:''); e.className='ov '+(e.classList.contains('sm')?'sm ':'')+(cls||''); }
 function healthBox(k,v,state){return `<div class="health ${state}"><div class="hk">${k}</div><div class="hv">${v}</div></div>`;}
 function renderHealth(o,r){ let adState='warn',adTxt='数据不足'; if(r.acos!==null&&r.beAcos>0){ if(r.acos<=r.beAcos*.7){adState='good';adTxt='健康盈利';} else if(r.acos<=r.beAcos){adState='warn';adTxt='临近保本';} else {adState='bad';adTxt='广告亏损';} } let cpcState=r.beCpc!==null&&o.cpc<=r.beCpc?'good':'bad'; let natState=r.natBeTraffic===null?'bad':o.naturalTraffic>=r.natBeTraffic?'good':'warn'; $('health_panel').innerHTML='<div class="section-t">经营健康状态</div><div class="health-grid">'+healthBox('基础利润',r.baseProfit>0?'为正':'为负',r.baseProfit>0?'good':'bad')+healthBox('广告盈利',adTxt,adState)+healthBox('CPC空间',r.beCpc===null?'数据不足':`当前 ${fmt(o.cpc)} / 保本 ${fmt(r.beCpc)}`,cpcState)+healthBox('自然流量',r.natBeTraffic===null?'无法保本':`当前 ${fmt(o.naturalTraffic,0)} / 保本 ${fmt(r.natBeTraffic,0)}`,natState)+'</div>'; }
-function renderOpDetail(o,r){ const rows=[['折后成交价','$ '+fmt(r.discounted)],['采购+头程','$ '+fmt(r.landed)],['FBA','$ '+fmt(o.fba)],['佣金','$ '+fmt(r.commission)],['退货损耗','$ '+fmt(r.returnCost)],['其他单件成本','$ '+fmt(o.otherCost)],['广告前贡献利润','$ '+fmt(r.baseProfit)],['广告CPA',r.cpa===null?'—':'$ '+fmt(r.cpa)],['广告订单净利润',r.adOrderProfit===null?'—':'$ '+fmt(r.adOrderProfit)],['广告销售额/天','$ '+fmt(r.adRevenue)],['总销售额/天','$ '+fmt(r.totalRevenue)],['ACOS',r.acos===null?'—':pct(r.acos,1)],['TACOS',r.tacos===null?'—':pct(r.tacos,1)],['ROAS',r.roas===null?'—':fmt(r.roas,2)+'×'],['日净利','$ '+fmt(r.dailyProfit)],['月净利','$ '+fmt(r.monthlyProfit)]]; $('op_detail').innerHTML='<div class="detail-grid">'+rows.map(x=>`<div class="ditem"><div class="dk">${x[0]}</div><div class="dv">${x[1]}</div></div>`).join('')+'</div>'; }
+function renderOpDetail(o,r){ const rows=[['折后成交价','$ '+fmt(r.discounted)],['采购+头程','$ '+fmt(r.landed)],['FBA','$ '+fmt(o.fba)],['佣金','$ '+fmt(r.commission)],['退货损耗','$ '+fmt(r.returnCost)],['其他单件成本','$ '+fmt(o.otherCost)],['广告前贡献利润','$ '+fmt(r.baseProfit)],['广告CPA',r.cpa===null?'—':'$ '+fmt(r.cpa)],['点击多少次出1单',r.clicksPerOrder===null?'—':fmt(r.clicksPerOrder,1)+' 次'],['广告订单净利润',r.adOrderProfit===null?'—':'$ '+fmt(r.adOrderProfit)],['广告销售额/天','$ '+fmt(r.adRevenue)],['总销售额/天','$ '+fmt(r.totalRevenue)],['ACOS',r.acos===null?'—':pct(r.acos,1)],['TACOS',r.tacos===null?'—':pct(r.tacos,1)],['ROAS',r.roas===null?'—':fmt(r.roas,2)+'×'],['日净利','$ '+fmt(r.dailyProfit)],['月净利','$ '+fmt(r.monthlyProfit)]]; $('op_detail').innerHTML='<div class="detail-grid">'+rows.map(x=>`<div class="ditem"><div class="dk">${x[0]}</div><div class="dv">${x[1]}</div></div>`).join('')+'</div>'; }
 
 function renderSimulator(){ const o=readOp(),r=calcOperation(o),t=reverseTargets(o,r,num($('sim_targetprofit').value),num($('sim_targetmargin').value)); if(o.price<=0){$('sim_baseline').innerHTML='<div class="empty">请先填写实际运营参数</div>'; return;} $('sim_baseline').innerHTML=`<div class="detail-grid"><div class="ditem"><div class="dk">折后价</div><div class="dv">$ ${fmt(r.discounted)}</div></div><div class="ditem"><div class="dk">广告前利润</div><div class="dv">$ ${fmt(r.baseProfit)}</div></div><div class="ditem"><div class="dk">当前CPA</div><div class="dv">${r.cpa===null?'—':'$ '+fmt(r.cpa)}</div></div><div class="ditem"><div class="dk">当前广告订单利润</div><div class="dv">${r.adOrderProfit===null?'—':'$ '+fmt(r.adOrderProfit)}</div></div></div>`; setVal('sim_maxcpc',t.maxCpc,'$'); setVal('sim_mincvr',t.minCvr,'%'); setVal('sim_minprice',t.minPrice,'$'); $('sim_maxlanded').textContent='¥ '+fmt(t.maxLanded); $('sim_nattraffic').textContent=t.natTraffic===null?'—':fmt(t.natTraffic,0)+' 次'; setVal('sim_marginprice',t.marginPrice,'$'); const n=$('sim_note'); if(r.baseProfit<=num($('sim_targetprofit').value)){n.style.display='block';n.innerHTML='<b>目标不可达：</b>当前广告前贡献利润已经不高于目标利润，需要先提高售价或降低基础成本。';} else n.style.display='none'; }
 
